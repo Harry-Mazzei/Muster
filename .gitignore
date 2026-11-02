@@ -1,0 +1,32 @@
+# Never publish music or personal data
+music/
+data/
+*.m4a
+*.mp3
+*.wav
+*.aac
+*.flac
+*.ogg
+*.oga
+*.opus
+presets.json
+
+# Builds
+build/
+bin/
+dist/
+*.exe
+muster-mac-*
+muster-linux
+
+# Tools and system files
+node_modules/
+.DS_Store
+Thumbs.db
+.env
+.env.*
+*.log
+
+# ...except tracks/: your own music, published with the web version (public!)
+!tracks/
+!tracks/**

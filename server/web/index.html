@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muster</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231B4F9C'/%3E%3Ccircle cx='16' cy='9' r='4' fill='%2313863F'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23E8A500'/%3E%3Ccircle cx='16' cy='23' r='4' fill='%23C3261F'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="word">Muster</span></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-view="run" class="tab">Run</button>
+    <button role="tab" data-view="practice" class="tab">Practice</button>
+    <button role="tab" data-view="parades" class="tab">Parades</button>
+    <button role="tab" data-view="music" class="tab">Music</button>
+    <button role="tab" data-view="settings" class="tab">Settings</button>
+  </nav>
+  <label class="picker"><span>Parade</span><select id="paradePick" aria-label="Loaded parade"></select></label>
+  <span id="statusPill" class="pill">Ready</span>
+</header>
+
+<main>
+  <!-- RUN -->
+  <section id="view-run" class="view" hidden>
+    <div id="runEmpty" class="empty" hidden>
+      <h2>No parade loaded</h2>
+      <p>Build a parade from your music, then load it here to run it.</p>
+      <button class="btn primary" id="runNew">Create a parade</button>
+    </div>
+    <div id="runMain" class="run">
+      <aside class="order panel">
+        <div class="panel-head"><h3>Running order</h3><button class="link" id="editLoaded">Edit</button></div>
+        <ol id="orderList" class="order-list"></ol>
+      </aside>
+
+      <div class="stage">
+        <div class="now panel" id="nowCard">
+          <div class="now-head">
+            <span class="eyebrow" id="nowEyebrow">Ready</span>
+            <span class="beat" id="beatDot" aria-hidden="true"></span>
+            <span class="bpm" id="bpmText"></span>
+          </div>
+          <h1 id="nowLabel">—</h1>
+          <p class="now-track" id="nowTrack"></p>
+          <div class="cue" id="nowCue" hidden></div>
+          <canvas id="progress" class="progress" height="56"></canvas>
+          <div class="clock">
+            <span class="elapsed" id="elapsed">0:00</span>
+            <span class="remaining" id="remaining">0:00</span>
+          </div>
+          <div class="banner" id="banner" hidden></div>
+        </div>
+        <div class="next panel">
+          <h3>Up next</h3>
+          <ol id="nextList" class="next-list"></ol>
+        </div>
+      </div>
+
+      <div class="lights">
+        <button class="light go" id="btnGo"><b>GO</b><small id="goHint">Play</small><kbd>Space</kbd></button>
+        <button class="light hold" id="btnHold"><b>As you were</b><small id="holdHint">Undo</small><kbd>←</kbd></button>
+        <button class="light stop" id="btnStop"><b>STOP</b><small id="stopHint">On next beat point</small><kbd>Esc</kbd></button>
+        <div class="minor">
+          <button class="btn" id="btnFade">Fade out<kbd>F</kbd></button>
+          <button class="btn" id="btnSkip">Skip next<kbd>S</kbd></button>
+          <button class="btn danger-soft" id="btnEmergency">Emergency play<kbd>E</kbd></button>
+        </div>
+        <div class="favs" id="favList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRACTICE -->
+  <section id="view-practice" class="view" hidden>
+    <div class="practice">
+      <div class="pr-head">
+        <h2>Practice</h2>
+        <input type="search" id="prSearch" placeholder="Search music" aria-label="Search music">
+      </div>
+      <div class="chips" id="prChips"></div>
+      <div class="cards" id="prCards"></div>
+    </div>
+    <div class="dock" id="dock">
+      <div class="dock-now">
+        <div class="dock-text"><b id="dockTitle">Pick a song</b><small id="dockSub"></small></div>
+        <span class="beat" id="dockBeat" aria-hidden="true"></span>
+        <span class="bpm" id="dockBpm"></span>
+      </div>
+      <div class="dock-mid">
+        <div class="dock-prog">
+          <button class="icon" id="pPrev" title="Previous" aria-label="Previous">⏮</button>
+          <span class="t" id="dockEl">0:00</span>
+          <canvas id="dockBar" title="Click to jump to this point"></canvas>
+          <span class="t" id="dockRem">0:00</span>
+          <button class="icon" id="pNext" title="Next" aria-label="Next">⏭</button>
+        </div>
+        <div class="dock-banner" id="dockBanner" hidden></div>
+        <div class="dock-toggles">
+          <button class="tog" id="pAuto" aria-pressed="true">Auto-play next</button>
+          <button class="tog" id="pRepeat" aria-pressed="false">Repeat: off</button>
+          <button class="tog" id="pFade">Fade out</button>
+        </div>
+      </div>
+      <div class="dock-ctl">
+        <button class="mini go" id="pGo" title="GO (Space)">GO</button>
+        <button class="mini hold" id="pHold" title="As you were (←)">As you were</button>
+        <button class="mini stop" id="pStop" title="STOP (Esc)">STOP</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PARADES -->
+  <section id="view-parades" class="view" hidden>
+    <div class="builder">
+      <aside class="panel plist">
+        <div class="panel-head"><h3>Saved parades</h3></div>
+        <ul id="paradeList" class="parade-list"></ul>
+        <div class="row gap">
+          <button class="btn primary" id="newParade">New parade</button>
+          <label class="btn file">Import file<input type="file" id="importParade" accept=".json,application/json" hidden></label>
+        </div>
+      </aside>
+
+      <div class="panel editor" id="editor">
+        <div id="editorEmpty" class="empty small"><h2>Pick or create a parade</h2><p>A parade is the list of music you need, in order.</p></div>
+        <div id="editorBody" hidden>
+          <div class="editor-head">
+            <input id="pName" class="title-input" maxlength="100" aria-label="Parade name">
+            <span class="save-state" id="saveState"></span>
+          </div>
+          <textarea id="pNotes" rows="2" maxlength="2000" placeholder="Notes for this parade (optional)"></textarea>
+          <div class="row gap wrap">
+            <button class="btn primary" id="runThis">Load in Run</button>
+            <button class="btn" id="rollAll" title="Turn rolling on or off for every movement at once">Roll all into next</button>
+            <button class="btn" id="dupParade">Duplicate</button>
+            <button class="btn" id="exportParade">Export</button>
+            <button class="btn danger" id="delParade">Delete</button>
+          </div>
+          <ol id="items" class="items"></ol>
+          <p class="hint" id="itemsHint">Add music from the library on the right. Drag the handles to reorder.</p>
+        </div>
+      </div>
+
+      <aside class="panel library">
+        <div class="panel-head"><h3>Music library</h3></div>
+        <input type="search" id="libSearch" placeholder="Search music">
+        <div id="libList" class="lib-list"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- MUSIC -->
+  <section id="view-music" class="view" hidden>
+    <div class="music">
+      <div class="panel">
+        <div class="panel-head wrap">
+          <h3>Music &amp; beat points</h3>
+          <div class="row gap wrap">
+            <input type="search" id="musicSearch" placeholder="Search">
+            <label class="btn primary file">Import music<input type="file" id="importMusic" accept="audio/*,.m4a,.mp3,.wav,.aac,.flac,.ogg" multiple hidden></label>
+            <input type="file" id="importFolder" webkitdirectory multiple hidden>
+            <button class="btn" id="rescan">Rescan folder</button>
+          </div>
+        </div>
+        <p class="hint" id="musicFolder"></p>
+        <div class="table-wrap"><table class="tracks">
+          <thead><tr><th>Title</th><th>Category</th><th class="num">Length</th><th class="num">BPM</th><th class="num">Points</th><th>Status</th></tr></thead>
+          <tbody id="trackRows"></tbody>
+        </table></div>
+      </div>
+
+      <div class="panel beatedit" id="beatEdit" hidden>
+        <div class="panel-head wrap">
+          <input id="tTitle" class="title-input" maxlength="120" aria-label="Track title">
+          <button class="link" id="closeEdit">Close</button>
+        </div>
+        <div class="row gap wrap fields">
+          <label>Category <input id="tCat" list="catList" maxlength="60"></label>
+          <datalist id="catList"></datalist>
+          <label>Volume <input type="range" id="tGain" min="0.25" max="2" step="0.05"> <output id="tGainOut"></output></label>
+          <label class="check"><input type="checkbox" id="tChecked"> Beat points checked</label>
+        </div>
+        <canvas id="wave" class="wave" height="150"></canvas>
+        <div class="row gap wrap trimrow"><span class="hint" id="trimInfo"></span><button class="btn" id="trimReset">Reset start &amp; end</button></div>
+        <div class="row gap wrap">
+          <button class="btn primary" id="wPlay">Play</button>
+          <button class="btn" id="wMark">Add point here<kbd>M</kbd></button>
+          <button class="btn" id="wDelete">Remove nearest</button>
+          <button class="btn" id="wChange">Quick time starts here</button>
+          <span class="sep"></span>
+          <label>Every <input type="number" id="wEvery" min="1" max="64" value="4"> beats from beat <input type="number" id="wFrom" min="1" value="1"></label>
+          <button class="btn" id="wApply">Set points</button>
+          <button class="btn" id="wClear">Clear points</button>
+          <button class="btn" id="wAnalyse">Re-detect beats</button>
+        </div>
+        <p class="hint">The green handles mark where the music starts and ends; drag them to change it. Greyed-out parts are skipped everywhere in Muster (your files are never edited). Click the waveform to move the playhead. Beat points are the thick marks: STOP and GO changes land on them. Thin marks are detected beats. The music here plays through your speakers, so don't use it during a parade.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="view-settings" class="view" hidden>
+    <div class="settings">
+      <div class="panel">
+        <h3>Appearance</h3>
+        <div class="seg" id="themeSeg">
+          <button data-theme="day">Sunlight</button><button data-theme="night">Night</button><button data-theme="system">Match computer</button>
+        </div>
+        <p class="hint">Sunlight is a high-contrast light theme for laptops used outdoors.</p>
+      </div>
+      <div class="panel">
+        <h3>Playback</h3>
+        <label class="slider">Fade-out length <input type="range" id="sFade" min="1" max="15" step="0.5"><output id="sFadeOut"></output></label>
+        <label class="slider">Beat point timing <input type="range" id="sOffset" min="-250" max="250" step="5"><output id="sOffsetOut"></output></label>
+        <p class="hint">If stops land slightly early, move timing later (positive). If they land late, move it earlier.</p>
+        <label class="slider">Master volume <input type="range" id="sVol" min="0" max="1" step="0.01"><output id="sVolOut"></output></label>
+        <label class="check"><input type="checkbox" id="sFlash"> Flash on the beat (rehearsal aid)</label>
+      </div>
+      <div class="panel">
+        <h3>Keyboard &amp; foot pedals</h3>
+        <table class="keys">
+          <tr><td>GO</td><td><kbd>Space</kbd> <kbd>Enter</kbd> <kbd>→</kbd> <kbd>Page Down</kbd></td></tr>
+          <tr><td>As you were</td><td><kbd>←</kbd> <kbd>Backspace</kbd></td></tr>
+          <tr><td>STOP (press twice to stop now)</td><td><kbd>Esc</kbd> <kbd>↓</kbd> <kbd>Page Up</kbd></td></tr>
+          <tr><td>Fade out / Skip next / Emergency</td><td><kbd>F</kbd> <kbd>S</kbd> <kbd>E</kbd></td></tr>
+          <tr><td>Play a favourite straight away</td><td><kbd>1</kbd> … <kbd>9</kbd></td></tr>
+        </table>
+        <p class="hint">Page-turner pedals send Page Down / Page Up, so a two-button pedal gives you GO and STOP.</p>
+      </div>
+      <div class="panel">
+        <h3>Backup</h3>
+        <p class="hint">Saves every parade, your settings and all beat points to one file. Music files are not included.</p>
+        <div class="row gap wrap">
+          <button class="btn primary" id="backupBtn">Download backup</button>
+          <label class="btn file">Restore from backup<input type="file" id="restoreFile" accept=".json,application/json" hidden></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>About</h3>
+        <p class="hint" id="aboutText"></p>
+        <button class="btn danger" id="quitBtn">Quit Muster</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="overlay" id="emergency" hidden>
+  <div class="overlay-box">
+    <div class="panel-head"><h2>Emergency play</h2><div class="row gap"><button class="btn" id="editFavs">Edit favourites</button><button class="btn" id="closeEmergency">Close<kbd>Esc</kbd></button></div></div>
+    <p class="hint" id="emergencyHint"></p>
+    <div id="emergencyGrid" class="egrid"></div>
+  </div>
+</div>
+
+<div class="gate" id="gate" hidden>
+  <div class="gate-box">
+    <div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="word">Muster</span></div>
+    <p id="gateMsg"></p>
+    <button class="btn primary" id="gateBtn" hidden>Sign in</button>
+    <p class="hint" id="gateHint"></p>
+  </div>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script src="firebase-config.js"></script>
+<script src="beat.js"></script>
+<script src="cloud.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

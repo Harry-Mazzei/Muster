@@ -1,0 +1,36 @@
+# Tests the code on every push and builds the laptop apps.
+# Download the ready-to-use Muster folder from the run's "Artifacts" section (Actions tab).
+name: Build laptop apps
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+      - name: Test
+        run: cd server && go vet ./... && go test ./...
+      - name: Build
+        run: |
+          set -e
+          out="$PWD/dist/Muster"
+          mkdir -p "$out/bin" "$out/music" "$out/data"
+          cd server
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o "$out/bin/muster-mac-arm64" .
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$out/bin/muster-mac-intel" .
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$out/Muster.exe" .
+          cd ..
+          cp "launch/Start Muster (Mac).command" launch/README.txt LICENSE THIRD-PARTY-NOTICES.md "$out/"
+          cp -r licenses "$out/"
+          chmod +x "$out/Start Muster (Mac).command" "$out"/bin/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Muster
+          path: dist

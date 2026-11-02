@@ -1,0 +1,42 @@
+# Publishes the web version (server/web) to GitHub Pages whenever main changes.
+name: Publish web version
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Assemble site (app + your music from tracks/)
+        run: |
+          mkdir -p _site/tracks
+          cp -r server/web/. _site/
+          if [ -d tracks ]; then find tracks -maxdepth 1 -type f ! -name '.*' -exec cp {} _site/tracks/ \; ; fi
+          python3 - <<'PY'
+          import json, os
+          d = '_site/tracks'
+          ok = {'m4a', 'mp3', 'wav', 'aac', 'flac', 'ogg', 'oga', 'opus'}
+          files = sorted(f for f in os.listdir(d) if '.' in f and f.rsplit('.', 1)[1].lower() in ok)
+          for f in os.listdir(d):
+              if f not in files: os.remove(os.path.join(d, f))
+          json.dump([{'file': f, 'size': os.path.getsize(os.path.join(d, f))} for f in files], open(os.path.join(d, 'index.json'), 'w'))
+          print(len(files), 'track(s) published')
+          PY
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

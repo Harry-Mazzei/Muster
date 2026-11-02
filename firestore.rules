@@ -1,0 +1,15 @@
+rules_version = '2';
+// Security rules for the web version of Muster.
+// Paste these into Firebase console > Firestore Database > Rules, put YOUR Google email
+// address in place of you@gmail.com, then press Publish.
+// Only that one Google account can read or change anything. Everyone else is refused.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email == "you@gmail.com"
+        && request.auth.token.email_verified == true;
+    }
+  }
+}
