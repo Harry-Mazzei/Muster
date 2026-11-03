@@ -1,4 +1,6 @@
 # Publishes the web version (server/web) to GitHub Pages whenever main changes.
+# Also analyses the music in tracks/ (categories, silence trim, beat points) with tools/analyze.js.
+# The analysis is cached, so it only runs again when the tracks change.
 name: Publish web version
 on:
   push:
@@ -35,6 +37,27 @@ jobs:
           json.dump([{'file': f, 'size': os.path.getsize(os.path.join(d, f))} for f in files], open(os.path.join(d, 'index.json'), 'w'))
           print(len(files), 'track(s) published')
           PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Reuse earlier track analysis
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: .analysis/presets.json
+          key: analysis-${{ hashFiles('tracks/**', 'tools/analyze.js', 'server/web/beat.js') }}
+      - name: Analyse tracks (categories, trim, beat points)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .analysis
+          if ls tracks/*.* >/dev/null 2>&1; then
+            command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+            node tools/analyze.js tracks .analysis/presets.json
+          else
+            echo '{}' > .analysis/presets.json
+          fi
+      - name: Add analysis to the site
+        run: cp .analysis/presets.json _site/tracks/presets.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

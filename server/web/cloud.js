@@ -317,15 +317,48 @@ const Cloud = WEB ? (() => {
     let list = [];
     try { const r = await fetch('tracks/index.json', { cache: 'no-cache' }); if (r.ok) list = await r.json(); } catch { /* offline: use what is cached */ }
     if (!Array.isArray(list)) return;
+    // tracks/presets.json: categories, trim and beat points worked out by the GitHub workflow (tools/analyze.js)
+    let presets = {};
+    try { const r = await fetch('tracks/presets.json', { cache: 'no-cache' }); if (r.ok) presets = (await r.json()) || {}; } catch { /* none yet */ }
     const fresh = [];
     for (const x of list) {
       const file = typeof x === 'string' ? x : x?.file;
       if (!file || !AUDIO.test(file) || file.includes('/')) continue;
       const id = await trackId(file);
       builtin.set(id, file);
-      if (!tracks.has(id)) { const t = guess(id, file); tracks.set(id, t); fresh.push(['tracks/' + id, t]); }
+      const p = presets[file], t = tracks.get(id);
+      if (!t) { const n = p ? fromPreset(id, file, p) : guess(id, file); tracks.set(id, n); fresh.push(['tracks/' + id, n]); continue; }
+      const n = p && upgrade(t, p);
+      if (n) { tracks.set(id, n); fresh.push(['tracks/' + id, n]); }
     }
     if (fresh.length) later(remote.setMany(fresh));
+  }
+  function fromPreset(id, file, p) {
+    const g = guess(id, file);
+    return { ...g, title: clip(p.title, 120) || g.title, category: clip(p.category, 60) || g.category, order: Number.isInteger(p.order) ? p.order : g.order,
+      duration: num(p.duration), trimStart: num(p.trimStart), trimEnd: num(p.trimEnd), bpm: num(p.bpm), bpm2: num(p.bpm2), change: num(p.change),
+      av: p.av | 0, beats: cleanTimes(p.beats, 0), points: cleanTimes(p.points, 0), confidence: num(p.confidence), analysed: true };
+  }
+  // Newer prepared data fills in what a track is missing; anything set by hand is never overwritten.
+  function upgrade(t, p) {
+    const n = { ...t };
+    let changed = false;
+    if (!t.trimEnd && !t.trimSet && p.trimEnd > 0) { n.trimStart = num(p.trimStart); n.trimEnd = num(p.trimEnd); changed = true; }
+    if ((p.av | 0) > (t.av | 0) && !t.checked) {
+      Object.assign(n, { bpm: num(p.bpm), bpm2: num(p.bpm2), change: num(p.change), confidence: num(p.confidence), av: p.av | 0,
+        beats: cleanTimes(p.beats, 0), points: cleanTimes(p.points, 0) });
+      changed = true;
+    }
+    if (t.category === 'Other' && p.category && p.category !== 'Other') {
+      n.category = clip(p.category, 60);
+      const g = guess(t.id, t.file), plain = g.title.replace(/_/g, ' ');
+      if (t.title === plain || t.title === t.file.replace(/^\d+[\s._-]+/, '').replace(/\.[^.]+$/, '').replace(/_/g, ' ').trim()) n.title = clip(p.title, 120) || t.title;
+      changed = true;
+    }
+    if (!changed) return null;
+    if (!n.duration && p.duration) n.duration = num(p.duration);
+    n.analysed = true;
+    return n;
   }
 
   // ---------- the same API the local server offers ----------
