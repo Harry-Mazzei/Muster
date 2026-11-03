@@ -34,8 +34,7 @@ latest run and download **Muster** under *Artifacts*. Unzip it, copy your music 
 (see `launch/README.txt`).
 
 To build it yourself, install Go 1.24 or newer, then run `cd server && go build -o muster .`
-
-To set up the web version, follow **[SETUP.md](SETUP.md)**.
+**.
 
 ## Project layout
 
