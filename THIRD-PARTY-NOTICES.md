@@ -18,9 +18,3 @@ npx esbuild entry.js --bundle --format=esm --minify --target=es2020,safari15 --o
 ```
 
 where `entry.js` re-exports the functions listed at the top of `server/web/cloud.js`.
-
-## Music
-
-The only music in this repository is in `tracks/`. It belongs to the repository owner and is published with the
-web version. The ceremonial recordings used with Muster belong to their copyright holders and are not
-included. `.gitignore` blocks audio files everywhere except `tracks/` so they can't be committed by accident.

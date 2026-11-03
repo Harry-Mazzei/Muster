@@ -23,7 +23,7 @@ beat, so the band never cuts off mid-bar.
 
 | | Laptop app | Web version |
 | --- | --- | --- |
-| Where | Your Mac or Windows laptop, opened in your browser | `https://<your-username>.github.io/muster/` |
+| Where | Your Mac or Windows laptop, opened in your browser | `https://harry-mazzei.github.io/Muster/` |
 | Sign-in | None needed (only reachable from that laptop) | Google or email account (each person sees only their own), or guest mode |
 | Parades and settings | In the `data` folder next to the app | In each person's account, synced between their laptops (guests: this browser only) |
 | Music | In the `music` folder next to the app | Your own music in `tracks/` loads by itself (public). Anything else, choose once per laptop (stays private) |
@@ -36,17 +36,6 @@ latest run and download **Muster** under *Artifacts*. Unzip it, copy your music 
 To build it yourself, install Go 1.24 or newer, then run `cd server && go build -o muster .`
 
 To set up the web version, follow **[SETUP.md](SETUP.md)**.
-
-## Privacy and security
-
-- **Only your own music.** `tracks/` is for music you made or may share, and it's public. Ceremonial
-  recordings belong to their copyright holders and stay on your laptops. `.gitignore` blocks audio
-  everywhere except `tracks/`.
-- **No secrets in this repository.** The values in `server/web/firebase-config.js` only name a Firebase
-  project and are meant to be public. Access is controlled by the Firestore security rules (see SETUP.md):
-  each signed-in person can only read and write their own parades, and nobody can see anyone else's.
-- **The laptop app** only answers requests from the same computer (`localhost`) and refuses anything else.
-- **The web version** never uploads music. Audio stays in the browser's own storage on each laptop.
 
 ## Project layout
 
