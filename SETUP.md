@@ -23,11 +23,27 @@ Replace `USERNAME` below with your GitHub username.
 2. Go to **Build → Authentication → Get started**. Under **Sign-in method**, choose **Google**, turn it
    on, pick your email as the support email, and click **Save**.
 3. Still in Authentication, go to **Settings → Authorized domains → Add domain** and enter `USERNAME.github.io`.
+   *Optional:* also turn on **Email/Password** under Sign-in method if you'd like to sign in with an email
+   and password instead of Google. Muster sends a link to confirm the address the first time, and only a
+   confirmed address is let in.
 4. Go to **Build → Firestore Database → Create database**. Choose the location
    **australia-southeast1 (Sydney)** and **production mode**.
-5. In Firestore, open the **Rules** tab. Paste in the contents of `firestore.rules`, change
-   `you@gmail.com` to your own Google address, and click **Publish**.
-   This is what stops anyone else getting in.
+5. In Firestore, open the **Rules** tab, replace everything with the rules below and click **Publish**.
+   Anyone can sign up, but each person can only see and change their own parades. Email accounts must
+   confirm their address first.
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{uid}/{document=**} {
+         allow read, write: if request.auth != null
+           && request.auth.uid == uid
+           && request.auth.token.email_verified == true;
+       }
+     }
+   }
+   ```
+   To make it private to just you instead, add `&& request.auth.token.email == "you@gmail.com"` before the `;`.
 6. Click the gear icon, then **Project settings → General → Your apps**. Click the **</>** (Web) icon,
    name the app `Muster`, leave Hosting unticked and click **Register app**.
    Copy the `firebaseConfig = { ... }` block it shows.
@@ -55,7 +71,6 @@ Security comes from the rules in step 5.
 ## 3. First use
 
 1. Open `https://USERNAME.github.io/muster/` and click **Sign in with Google**.
-   Any other Google account is turned away.
 2. **Bring your parades across:** in the laptop app, go to **Settings → Download backup**. In the web
    version, go to **Settings → Restore from backup** and choose that file. Your parades, beat points and
    settings come over, and they sync to every laptop you sign in on.

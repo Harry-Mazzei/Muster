@@ -259,7 +259,16 @@
     <div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="word">Muster</span></div>
     <p id="gateMsg"></p>
     <button class="btn primary" id="gateBtn" hidden>Sign in</button>
-    <p class="hint" id="gateHint"></p>
+    <form id="gateForm" class="gate-form" hidden novalidate>
+      <div class="gate-or"><span>or use email</span></div>
+      <input type="email" id="gEmail" autocomplete="username" placeholder="Email" aria-label="Email">
+      <input type="password" id="gPass" autocomplete="current-password" placeholder="Password" aria-label="Password">
+      <button class="btn primary" type="submit" id="gSignIn">Sign in with email</button>
+      <div class="gate-links"><button type="button" class="linkbtn" id="gCreate">Create account</button><button type="button" class="linkbtn" id="gReset">Forgot password?</button></div>
+    </form>
+    <button type="button" class="linkbtn" id="gGuest" hidden>Use without an account</button>
+    <p class="hint" id="gateHint" role="status"></p>
+    <button type="button" class="linkbtn" id="gateAlt" hidden></button>
   </div>
 </div>
 

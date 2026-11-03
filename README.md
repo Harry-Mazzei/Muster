@@ -24,8 +24,8 @@ beat, so the band never cuts off mid-bar.
 | | Laptop app | Web version |
 | --- | --- | --- |
 | Where | Your Mac or Windows laptop, opened in your browser | `https://<your-username>.github.io/muster/` |
-| Sign-in | None needed (only reachable from that laptop) | Google sign-in, owner only |
-| Parades and settings | In the `data` folder next to the app | In your own Firebase account, synced between laptops |
+| Sign-in | None needed (only reachable from that laptop) | Google or email account (each person sees only their own), or guest mode |
+| Parades and settings | In the `data` folder next to the app | In each person's account, synced between their laptops (guests: this browser only) |
 | Music | In the `music` folder next to the app | Your own music in `tracks/` loads by itself (public). Anything else, choose once per laptop (stays private) |
 | Internet | Never needed | Needed to sign in. Opens offline after that |
 
@@ -43,8 +43,8 @@ To set up the web version, follow **[SETUP.md](SETUP.md)**.
   recordings belong to their copyright holders and stay on your laptops. `.gitignore` blocks audio
   everywhere except `tracks/`.
 - **No secrets in this repository.** The values in `server/web/firebase-config.js` only name a Firebase
-  project and are meant to be public. Access is controlled by `firestore.rules`, which lets exactly one
-  Google account read or write anything.
+  project and are meant to be public. Access is controlled by the Firestore security rules (see SETUP.md):
+  each signed-in person can only read and write their own parades, and nobody can see anyone else's.
 - **The laptop app** only answers requests from the same computer (`localhost`) and refuses anything else.
 - **The web version** never uploads music. Audio stays in the browser's own storage on each laptop.
 

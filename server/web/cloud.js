@@ -123,9 +123,10 @@ const Cloud = WEB ? (() => {
       },
     };
   }
-  function testStore() {
-    const k = (p) => 'muster-test:' + p;
-    const all = () => Object.keys(localStorage).filter((x) => x.startsWith('muster-test:'));
+  // Saves in this browser only (guest mode and local test mode)
+  function localStore(prefix) {
+    const k = (p) => prefix + p;
+    const all = () => Object.keys(localStorage).filter((x) => x.startsWith(prefix));
     return {
       async get(p) { const v = localStorage.getItem(k(p)); return v ? JSON.parse(v) : null; },
       async list(c) { return all().filter((x) => x.startsWith(k(c + '/'))).map((x) => JSON.parse(localStorage.getItem(x))); },
@@ -136,38 +137,126 @@ const Cloud = WEB ? (() => {
   }
 
   // ---------- sign in ----------
-  const gate = (msg, btn, hint) => {
+  const gate = (msg, btn, hint, alt) => {
     $('#gate').hidden = false;
     $('#gateMsg').textContent = msg;
     $('#gateBtn').hidden = !btn; if (btn) $('#gateBtn').textContent = btn;
     $('#gateHint').textContent = hint || '';
+    $('#gateAlt').hidden = !alt; if (alt) $('#gateAlt').textContent = alt;
+    $('#gateForm').hidden = true;
+    $('#gGuest').hidden = true;
   };
+  // Guest mode: no account, everything saved in this browser only. Never touches the owner's data.
+  const GUEST = { guest: true };
+  const offerGuest = (resolve) => { $('#gGuest').hidden = false; $('#gGuest').onclick = () => resolve(GUEST); };
+  async function enterGuest() {
+    try { localStorage.setItem('muster-mode', 'guest'); } catch {}
+    user = { email: null, name: 'Guest', guest: true };
+    remote = localStore('muster-guest:');
+    Cloud.signOut = async () => { try { localStorage.removeItem('muster-mode'); } catch {} location.reload(); };
+    await finish();
+  }
+  const say = (t) => { $('#gateHint').textContent = t; };
+  const AUTH_ERR = {
+    'auth/invalid-credential': 'Email or password is wrong.', 'auth/wrong-password': 'Email or password is wrong.',
+    'auth/user-not-found': 'Email or password is wrong.', 'auth/invalid-email': 'That email address doesn’t look right.',
+    'auth/missing-password': 'Type your password.', 'auth/weak-password': 'Use a password of at least 6 characters.',
+    'auth/email-already-in-use': 'That email already has an account. Sign in instead, or use Google if that’s how you signed up.',
+    'auth/too-many-requests': 'Too many tries. Wait a few minutes and try again.',
+    'auth/admin-restricted-operation': 'New accounts are switched off for this Muster.',
+    'auth/operation-not-allowed': 'That sign-in method isn’t switched on in Firebase.',
+    'auth/network-request-failed': 'No internet connection.',
+  };
+  const authMsg = (e) => AUTH_ERR[e?.code] || 'Sign-in failed: ' + (e?.message || e);
+  // Resolves with a signed-in user (Google or email). Email accounts may still need verifying.
+  function signInScreen(m) {
+    return new Promise((resolve) => {
+      gate('Parade music console. Sign in to continue.', 'Sign in with Google');
+      $('#gateForm').hidden = false;
+      offerGuest(resolve);
+      const email = () => $('#gEmail').value.trim(), pass = () => $('#gPass').value;
+      const busy = (on) => { for (const b of ['#gateBtn', '#gSignIn', '#gCreate', '#gReset']) $(b).disabled = on; };
+      const attempt = async (fn) => { busy(true); try { const u = await fn(); if (u) resolve(u); } catch (e) { if (!/popup-closed|cancelled-popup/.test(e?.code || '')) say(authMsg(e)); } finally { busy(false); } };
+      $('#gateBtn').onclick = () => attempt(m.google);
+      $('#gateForm').onsubmit = (ev) => { ev.preventDefault(); if (!email() || !pass()) return say('Type your email and password.'); attempt(() => m.signIn(email(), pass())); };
+      $('#gCreate').onclick = () => {
+        if (!email() || pass().length < 6) return say('Type your email and a new password (at least 6 characters), then press Create account.');
+        attempt(() => m.create(email(), pass()));
+      };
+      $('#gReset').onclick = () => {
+        if (!email()) return say('Type your email above first, then press Forgot password.');
+        attempt(async () => { await m.reset(email()); say(`If ${email()} has an account, a reset link is on its way. Check spam too.`); });
+      };
+    });
+  }
+  // Email accounts must confirm their address (the security rules only accept verified emails).
+  async function verifyScreen(m, u) {
+    try { await m.sendVerify(u); } catch (e) { if (e?.code !== 'auth/too-many-requests') toast(authMsg(e), true); }
+    gate(`We sent a link to ${u.email}. Open it, then press Continue.`, 'Continue', 'No email? Check your spam folder.', 'Use a different account');
+    return new Promise((resolve) => {
+      $('#gateBtn').onclick = async () => {
+        const ok = await m.checkVerified(u).catch(() => false);
+        if (ok) resolve(ok); else say('Not verified yet. Open the link in the email first, then press Continue.');
+      };
+      $('#gateAlt').onclick = async () => { await m.signOut(); resolve(null); };
+    });
+  }
+  async function signInLoop(m, u) {
+    while (!u || !u.emailVerified) {
+      if (!u) u = await signInScreen(m);
+      if (u === GUEST) return u;
+      if (u && !u.emailVerified) u = await verifyScreen(m, u);
+    }
+    return u;
+  }
   async function start() {
+    let mode = null;
+    try { mode = localStorage.getItem('muster-mode'); } catch {}
+    if (mode === 'guest') return enterGuest();
     if (TEST) {
-      gate('Local test mode. Nothing leaves this browser.', 'Sign in (test)');
-      await new Promise((r) => { $('#gateBtn').onclick = r; });
-      user = { email: 'test@localhost', name: 'Test' }; remote = testStore();
+      // local test mode only: pretend accounts, nothing leaves this browser
+      const fake = (email, verified) => ({ email, displayName: email, uid: 'test', emailVerified: verified });
+      const m = {
+        google: async () => fake('test@localhost', true),
+        signIn: async (e, p) => { if (p !== 'parade123') throw { code: 'auth/invalid-credential' }; return fake(e, localStorage.getItem('muster-test-verified') === e); },
+        create: async (e) => fake(e, false),
+        reset: async () => {},
+        sendVerify: async () => {},
+        checkVerified: async (u) => (localStorage.getItem('muster-test-verified') === u.email ? fake(u.email, true) : false),
+        signOut: async () => {},
+      };
+      const u = await signInLoop(m, null);
+      if (u === GUEST) return enterGuest();
+      user = { email: u.email, name: u.email }; remote = localStore('muster-test:');
     } else {
       const cfg = window.MUSTER_FIREBASE;
-      if (!cfg || !cfg.apiKey) { gate('Muster is not connected to an account yet.', null, 'Add your Firebase settings to firebase-config.js (see SETUP.md).'); await new Promise(() => {}); }
+      if (!cfg || !cfg.apiKey) {
+        gate('Muster is not connected to an account yet.', null, 'Add your Firebase settings to firebase-config.js (see SETUP.md).');
+        await new Promise((r) => offerGuest(r));
+        return enterGuest();
+      }
       gate('Checking sign-in…');
       const fb = await import('./vendor/firebase.js');
       const app = fb.initializeApp(cfg);
       const auth = fb.getAuth(app);
       fb.getRedirectResult(auth).catch(() => {});
-      const u = await new Promise((r) => { const off = fb.onAuthStateChanged(auth, (x) => { off(); r(x); }); });
-      let signed = u;
-      while (!signed) {
-        gate('Parade music console. Sign in to continue.', 'Sign in with Google');
-        await new Promise((r) => { $('#gateBtn').onclick = r; });
-        const provider = new fb.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        try { signed = (await fb.signInWithPopup(auth, provider)).user; }
-        catch (e) {
-          if (e?.code === 'auth/popup-blocked') { await fb.signInWithRedirect(auth, provider); return new Promise(() => {}); }
-          if (e?.code !== 'auth/popup-closed-by-user' && e?.code !== 'auth/cancelled-popup-request') toast('Sign-in failed: ' + (e?.message || e), true);
-        }
-      }
+      const provider = new fb.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const m = {
+        async google() {
+          try { return (await fb.signInWithPopup(auth, provider)).user; }
+          catch (e) { if (e?.code === 'auth/popup-blocked') { await fb.signInWithRedirect(auth, provider); return new Promise(() => {}); } throw e; }
+        },
+        signIn: async (e, p) => (await fb.signInWithEmailAndPassword(auth, e, p)).user,
+        create: async (e, p) => (await fb.createUserWithEmailAndPassword(auth, e, p)).user,
+        reset: (e) => fb.sendPasswordResetEmail(auth, e),
+        sendVerify: (u) => fb.sendEmailVerification(u),
+        async checkVerified(u) { await u.reload(); const c = auth.currentUser; if (!c?.emailVerified) return false; await c.getIdToken(true); return c; },
+        signOut: () => fb.signOut(auth),
+      };
+      const u0 = await new Promise((r) => { const off = fb.onAuthStateChanged(auth, (x) => { off(); r(x); }); });
+      const signed = await signInLoop(m, u0);
+      if (signed === GUEST) return enterGuest();
       user = { email: signed.email, name: signed.displayName || signed.email };
       Cloud.signOut = async () => { await fb.signOut(auth); location.reload(); };
       gate('Opening your parades…');
@@ -180,6 +269,9 @@ const Cloud = WEB ? (() => {
         await fb.signOut(auth); location.reload(); return new Promise(() => {});
       }
     }
+    await finish();
+  }
+  async function finish() {
     if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
     await refresh();
     $('#gate').hidden = true;

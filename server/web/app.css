@@ -329,3 +329,12 @@ body:has(#view-practice:not([hidden])) .toasts { bottom: 130px; }
 .gate-box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 32px; width: min(420px, 100%); display: grid; gap: 16px; justify-items: center; text-align: center; }
 .gate-box p { margin: 0; }
 .gate-box .btn { min-width: 220px; justify-content: center; }
+.gate-form { display: grid; gap: 10px; width: 100%; }
+.gate-form input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunk); }
+.gate-form .btn { width: 100%; min-width: 0; }
+.gate-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 4px 0; }
+.gate-or::before, .gate-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.gate-links { display: flex; justify-content: space-between; }
+.linkbtn { background: none; border: 0; padding: 4px 0; color: var(--accent); cursor: pointer; font-size: 14px; }
+.linkbtn:hover { text-decoration: underline; }
+#gateBtn { width: 100%; }

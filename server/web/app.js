@@ -1145,8 +1145,11 @@ function renderSettings() {
   $('#sOffset').value = s.offsetMs; $('#sOffsetOut').textContent = (s.offsetMs > 0 ? '+' : '') + s.offsetMs + ' ms';
   $('#sVol').value = s.volume; $('#sVolOut').textContent = Math.round(s.volume * 100) + '%';
   $('#sFlash').checked = !!s.beatFlash;
-  $('#aboutText').textContent = WEB
-    ? `Muster ${App.version} (web). Signed in as ${Cloud.user()?.email}. ${App.library.length} tracks, ${App.parades.length} saved parades. Parades, settings and beat points are saved to your account; music stays in this browser.`
+  const guest = WEB && Cloud.user()?.guest;
+  if (WEB) $('#quitBtn').textContent = guest ? 'Sign in to an account' : 'Sign out';
+  $('#aboutText').textContent = guest
+    ? `Muster ${App.version} (web, guest). ${App.library.length} tracks, ${App.parades.length} saved parades. You're using Muster without an account: everything is saved in this browser only. Download a backup now and then so you don't lose it.`
+    : WEB ? `Muster ${App.version} (web). Signed in as ${Cloud.user()?.email}. ${App.library.length} tracks, ${App.parades.length} saved parades. Parades, settings and beat points are saved to your account; music stays in this browser.`
     : `Muster ${App.version}. Music folder: ${App.musicDir}. ${App.library.length} tracks, ${App.parades.length} saved parades. Everything stays on this computer.`;
 }
 
@@ -1400,11 +1403,10 @@ function wire() {
   $('#sVol').oninput = (e) => { App.settings.volume = +e.target.value; if (Engine.master) Engine.master.gain.setTargetAtTime(App.settings.volume, Engine.now(), 0.03); renderSettings(); saveSettings(); };
   $('#sFlash').onchange = (e) => { App.settings.beatFlash = e.target.checked; saveSettings(); };
   $('#backupBtn').onclick = () => { if (WEB) download(`muster-backup-${new Date().toISOString().slice(0, 10)}.json`, Cloud.exportAll()); else location.href = '/api/backup'; };
-  if (WEB) $('#quitBtn').textContent = 'Sign out';
   $('#restoreFile').onchange = async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) await restoreFrom(f); };
   $('#quitBtn').onclick = (e) => {
     if (Engine.cur || Practice.cur) return toast('Stop the music first.');
-    if (WEB) return confirmClick(e.currentTarget, 'Click again to sign out', () => Cloud.signOut());
+    if (WEB) return Cloud.user()?.guest ? Cloud.signOut() : confirmClick(e.currentTarget, 'Click again to sign out', () => Cloud.signOut());
     confirmClick(e.currentTarget, 'Click again to quit', async () => {
       await api('POST', '/api/quit').catch(() => {});
       document.body.replaceChildren(h('div', { class: 'empty' }, h('h2', {}, 'Muster has closed'), h('p', {}, 'You can close this tab. To start again, open Muster from its folder.')));
